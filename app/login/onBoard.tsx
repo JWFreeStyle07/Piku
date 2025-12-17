@@ -839,7 +839,7 @@ export default function OnBoard() {
     router.push({
       pathname: '../../login/introductionScreen',
       params: {
-        photo: account.photo,
+        photoPath: account.photoPath, // CHANGED: Use photoPath instead of photo
         name: account.name,
         nickname: nicknames[account.id],
       },
