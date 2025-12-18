@@ -3,15 +3,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, doc, getDocs, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { db } from '../../firebase/firebaseConfig';
@@ -85,8 +85,15 @@ export default function NameEvent() {
   };
 
   const handleContinue = async () => {
-    if (!eventName.trim()) {
-      Alert.alert('Error', 'Please enter an event name');
+    // Validate event name is not empty
+    if (!eventName || !eventName.trim()) {
+      Alert.alert('Event Name Required', 'Please enter an event name before continuing.');
+      return;
+    }
+
+    // Check if event name has at least 3 characters
+    if (eventName.trim().length < 3) {
+      Alert.alert('Invalid Event Name', 'Event name must be at least 3 characters long.');
       return;
     }
 
@@ -185,9 +192,12 @@ export default function NameEvent() {
 
         {/* Continue Button */}
         <TouchableOpacity
-          style={[styles.continueButton, isSaving && styles.continueButtonDisabled]}
+          style={[
+            styles.continueButton, 
+            (isSaving || !eventName.trim()) && styles.continueButtonDisabled
+          ]}
           onPress={handleContinue}
-          disabled={isSaving}
+          disabled={isSaving || !eventName.trim()}
           activeOpacity={0.8}
         >
           {isSaving ? (
