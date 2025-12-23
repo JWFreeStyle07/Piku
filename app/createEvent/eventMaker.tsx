@@ -97,11 +97,21 @@ export default function EventMaker() {
   };
 
   const handleRecentEvents = () => {
-    router.push('../../createEvent/recentEvents');
+    router.push({
+      pathname: '../../createEvent/recentEvents',
+      params: {
+        userId: userId,
+      },
+    });
   };
 
   const handleEditProfile = () => {
-    router.push('../../profile/editProfile');
+    router.push({
+      pathname: '../../profile/editProfile',
+      params: {
+        userId: userId,
+      },
+    });
   };
 
   const handleSetupEvent = () => {
