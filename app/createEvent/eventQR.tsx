@@ -202,10 +202,6 @@
 //     height: 40,
 //     justifyContent: 'center',
 //     alignItems: 'center',
-//     backgroundColor: 'rgba(0, 0, 0, 0.1)',
-//     borderRadius: 20,
-//     borderWidth: 3,
-//     borderColor: '#000000',
 //   },
 //   title: {
 //     fontFamily: 'Protest Strike',
@@ -214,7 +210,7 @@
 //     fontSize: 40,
 //     lineHeight: 48,
 //     color: '#000000',
-//     marginTop: SCREEN_HEIGHT * 0.171,
+//     marginTop: SCREEN_HEIGHT * 0.13,
 //     textAlign: 'center',
 //   },
 //   description: {
@@ -229,7 +225,7 @@
 //     maxWidth: 262,
 //   },
 //   qrContainer: {
-//     marginTop: SCREEN_HEIGHT * 0.072,
+//     marginTop: SCREEN_HEIGHT * 0.04,
 //   },
 //   qrBox: {
 //     width: SCREEN_WIDTH * 0.743,
@@ -247,7 +243,7 @@
 //     fontSize: 17,
 //     lineHeight: 26,
 //     color: '#000000',
-//     marginTop: SCREEN_HEIGHT * 0.024,
+//     marginTop: SCREEN_HEIGHT * 0.02,
 //     textAlign: 'center',
 //   },
 //   shareButton: {
@@ -258,7 +254,7 @@
 //     flexDirection: 'row',
 //     justifyContent: 'center',
 //     alignItems: 'center',
-//     marginTop: SCREEN_HEIGHT * 0.067,
+//     marginTop: SCREEN_HEIGHT * 0.04,
 //   },
 //   shareIcon: {
 //     marginRight: 10,
@@ -273,22 +269,21 @@
 //   },
 // });
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as MediaLibrary from 'expo-media-library';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import React, { useRef, useState } from 'react';
 import {
-    Alert,
-    Dimensions,
-    Share,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Dimensions,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import ViewShot from 'react-native-view-shot';
+import { captureRef } from 'react-native-view-shot';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -300,7 +295,7 @@ export default function EventQR() {
   const eventName = params.eventName as string;
   const userId = params.userId as string;
   
-  const qrRef = useRef<any>(null);
+  const qrRef = useRef<View>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   // Generate event URL/link
@@ -315,42 +310,33 @@ export default function EventQR() {
     });
   };
 
-  const captureQRCode = async (): Promise<string> => {
-    try {
-      if (qrRef.current) {
-        const uri = await qrRef.current.capture();
-        return uri;
-      }
-      throw new Error('QR Code reference not found');
-    } catch (error) {
-      console.error('Error capturing QR code:', error);
-      throw error;
-    }
-  };
-
   const handleSaveQR = async () => {
     try {
       setIsSaving(true);
 
-      // Request media library permissions
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please allow access to save QR code to your gallery.'
-        );
+      if (!qrRef.current) {
+        Alert.alert('Error', 'QR code not ready for saving.');
         setIsSaving(false);
         return;
       }
 
-      // Capture QR code
-      const uri = await captureQRCode();
+      // Capture the QR code as an image
+      const uri = await captureRef(qrRef, {
+        format: 'png',
+        quality: 1.0,
+      });
 
-      // Save to media library
-      await MediaLibrary.createAssetAsync(uri);
-
-      Alert.alert('Success', 'QR code saved to gallery!');
+      // Check if sharing is available
+      const isAvailable = await Sharing.isAvailableAsync();
+      
+      if (isAvailable) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: 'Save or Share QR Code',
+        });
+      } else {
+        Alert.alert('Error', 'Sharing is not available on this device.');
+      }
     } catch (error) {
       console.error('Error saving QR code:', error);
       Alert.alert('Error', 'Failed to save QR code. Please try again.');
@@ -418,10 +404,10 @@ export default function EventQR() {
         </Text>
 
         {/* QR Code Container */}
-        <ViewShot
+        <View
           ref={qrRef}
-          options={{ format: 'png', quality: 1.0 }}
           style={styles.qrContainer}
+          collapsable={false}
         >
           <View style={styles.qrBox}>
             <QRCode
@@ -431,7 +417,7 @@ export default function EventQR() {
               backgroundColor="#FFFFFF"
             />
           </View>
-        </ViewShot>
+        </View>
 
         {/* Tap to Save Text */}
         <TouchableOpacity onPress={handleSaveQR} activeOpacity={0.7}>
