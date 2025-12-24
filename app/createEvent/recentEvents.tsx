@@ -1,24 +1,24 @@
 // import { MaterialCommunityIcons } from '@expo/vector-icons';
 // import { useFocusEffect } from '@react-navigation/native';
-// import { useRouter } from 'expo-router';
+// import { useLocalSearchParams, useRouter } from 'expo-router';
 // import { collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
 // import React, { useCallback, useRef, useState } from 'react';
 // import {
-//     ActivityIndicator,
-//     Alert,
-//     Animated,
-//     Dimensions,
-//     FlatList,
-//     Image,
-//     Modal,
-//     StyleSheet,
-//     Text,
-//     TouchableOpacity,
-//     TouchableWithoutFeedback,
-//     View
+//   ActivityIndicator,
+//   Alert,
+//   Animated,
+//   Dimensions,
+//   FlatList,
+//   Image,
+//   Modal,
+//   StyleSheet,
+//   Text,
+//   TouchableOpacity,
+//   TouchableWithoutFeedback,
+//   View
 // } from 'react-native';
 // import { SafeAreaView } from 'react-native-safe-area-context';
-// import { auth, db } from '../../firebase/firebaseConfig';
+// import { db } from '../../firebase/firebaseConfig';
 
 // const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -34,6 +34,10 @@
 
 // export default function RecentEvents() {
 //   const router = useRouter();
+//   const params = useLocalSearchParams();
+  
+//   const userId = params.userId as string;
+  
 //   const [events, setEvents] = useState<Event[]>([]);
 //   const [isLoading, setIsLoading] = useState(true);
 //   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -45,8 +49,6 @@
 //   const successOpacity = useRef(new Animated.Value(0)).current;
 //   const checkmarkScale = useRef(new Animated.Value(0)).current;
 
-//   const userId = auth.currentUser?.uid;
-
 //   useFocusEffect(
 //     useCallback(() => {
 //       fetchRecentEvents();
@@ -54,14 +56,21 @@
 //   );
 
 //   const fetchRecentEvents = async () => {
-//     if (!userId) return;
+//     if (!userId) {
+//       console.log('No userId found');
+//       setIsLoading(false);
+//       return;
+//     }
 
 //     try {
 //       setIsLoading(true);
+//       console.log('Fetching events for userId:', userId);
       
 //       const eventsRef = collection(db, 'events');
 //       const q = query(eventsRef, where('userId', '==', userId));
 //       const querySnapshot = await getDocs(q);
+      
+//       console.log('Total events found:', querySnapshot.size);
       
 //       const now = new Date();
 //       const endedEvents: Event[] = [];
@@ -69,6 +78,8 @@
 //       querySnapshot.forEach((doc) => {
 //         const eventData = doc.data();
 //         const endDate = new Date(eventData.endDate);
+        
+//         console.log('Event:', eventData.eventName, 'End Date:', endDate, 'Now:', now, 'Has Ended:', endDate < now);
         
 //         // Only include events that have ended
 //         if (endDate < now) {
@@ -551,21 +562,21 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import React, { useCallback, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Dimensions,
-    FlatList,
-    Image,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { db } from '../../firebase/firebaseConfig';
@@ -580,6 +591,8 @@ interface Event {
   coverImageURL: string;
   endDate: string;
   createdAt: string;
+  isHosted?: boolean;
+  hostUserName?: string;
 }
 
 export default function RecentEvents() {
@@ -594,6 +607,7 @@ export default function RecentEvents() {
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isHostedEvent, setIsHostedEvent] = useState(false);
 
   const successScale = useRef(new Animated.Value(0)).current;
   const successOpacity = useRef(new Animated.Value(0)).current;
@@ -604,6 +618,22 @@ export default function RecentEvents() {
       fetchRecentEvents();
     }, [userId])
   );
+
+  const fetchUserName = async (userId: string): Promise<string> => {
+    try {
+      const userRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+      
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        return userData.userName || 'Unknown User';
+      }
+      return 'Unknown User';
+    } catch (error) {
+      console.error('Error fetching username:', error);
+      return 'Unknown User';
+    }
+  };
 
   const fetchRecentEvents = async () => {
     if (!userId) {
@@ -616,37 +646,57 @@ export default function RecentEvents() {
       setIsLoading(true);
       console.log('Fetching events for userId:', userId);
       
-      const eventsRef = collection(db, 'events');
-      const q = query(eventsRef, where('userId', '==', userId));
-      const querySnapshot = await getDocs(q);
-      
-      console.log('Total events found:', querySnapshot.size);
-      
       const now = new Date();
-      const endedEvents: Event[] = [];
+      const allEndedEvents: Event[] = [];
+
+      // Fetch events created by user (My Events)
+      const eventsRef = collection(db, 'events');
+      const myEventsQuery = query(eventsRef, where('userId', '==', userId));
+      const myEventsSnapshot = await getDocs(myEventsQuery);
       
-      querySnapshot.forEach((doc) => {
+      myEventsSnapshot.forEach((doc) => {
         const eventData = doc.data();
         const endDate = new Date(eventData.endDate);
         
-        console.log('Event:', eventData.eventName, 'End Date:', endDate, 'Now:', now, 'Has Ended:', endDate < now);
-        
         // Only include events that have ended
         if (endDate < now) {
-          endedEvents.push({
+          allEndedEvents.push({
             ...eventData,
             id: doc.id,
+            isHosted: true,
           } as Event);
         }
       });
+
+      // Fetch all events where user is in joinedUsers array (Joined Events)
+      const allEventsSnapshot = await getDocs(eventsRef);
+      
+      for (const docSnap of allEventsSnapshot.docs) {
+        const eventData = docSnap.data();
+        const joinedUsers = eventData.joinedUsers || [];
+        const endDate = new Date(eventData.endDate);
+        
+        // Check if current user is in joinedUsers, is NOT the creator, and event has ended
+        if (joinedUsers.includes(userId) && eventData.userId !== userId && endDate < now) {
+          // Fetch the host's username
+          const hostUserName = await fetchUserName(eventData.userId);
+          
+          allEndedEvents.push({
+            ...eventData,
+            id: docSnap.id,
+            isHosted: false,
+            hostUserName: hostUserName,
+          } as Event);
+        }
+      }
       
       // Sort by end date, most recent first
-      endedEvents.sort((a, b) => 
+      allEndedEvents.sort((a, b) => 
         new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
       );
       
-      setEvents(endedEvents);
-      console.log('Fetched recent events:', endedEvents.length);
+      setEvents(allEndedEvents);
+      console.log('Fetched recent events (hosted + joined):', allEndedEvents.length);
     } catch (error) {
       console.error('Error fetching recent events:', error);
     } finally {
@@ -671,6 +721,7 @@ export default function RecentEvents() {
 
   const handleOptionsPress = (event: Event, pageX: number, pageY: number) => {
     setSelectedEventId(event.id);
+    setIsHostedEvent(event.isHosted || false);
     setMenuPosition({ x: pageX, y: pageY });
     setShowOptionsMenu(true);
   };
@@ -783,7 +834,11 @@ export default function RecentEvents() {
         resizeMode="cover"
       />
       <View style={styles.eventInfo}>
-        <Text style={styles.hostLabel}>Host</Text>
+        {item.isHosted ? (
+          <Text style={styles.hostLabel}>Host</Text>
+        ) : (
+          <Text style={styles.hostedByLabel}>Hosted By: {item.hostUserName}</Text>
+        )}
         <Text style={styles.eventName} numberOfLines={1}>
           {item.eventName}
         </Text>
@@ -791,21 +846,24 @@ export default function RecentEvents() {
           {calculateDaysAgo(item.endDate)}
         </Text>
       </View>
-      <TouchableOpacity
-        style={styles.optionsButton}
-        onPress={(e) => {
-          e.stopPropagation();
-          const { pageX, pageY } = e.nativeEvent;
-          handleOptionsPress(item, pageX, pageY);
-        }}
-        activeOpacity={0.7}
-      >
-        <MaterialCommunityIcons
-          name="dots-horizontal"
-          size={20}
-          color="#FFFFFC"
-        />
-      </TouchableOpacity>
+      {/* Only show options button for hosted events */}
+      {item.isHosted && (
+        <TouchableOpacity
+          style={styles.optionsButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            const { pageX, pageY } = e.nativeEvent;
+            handleOptionsPress(item, pageX, pageY);
+          }}
+          activeOpacity={0.7}
+        >
+          <MaterialCommunityIcons
+            name="dots-horizontal"
+            size={20}
+            color="#FFFFFC"
+          />
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 
@@ -890,7 +948,7 @@ export default function RecentEvents() {
           />
         )}
 
-        {/* Options Menu Modal */}
+        {/* Options Menu Modal - Only for hosted events */}
         <Modal
           visible={showOptionsMenu}
           transparent
@@ -917,13 +975,16 @@ export default function RecentEvents() {
                   >
                     <Text style={styles.menuItemText}>Edit Event</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.menuItem}
-                    onPress={handleDeleteEvent}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.menuItemText}>Delete Event</Text>
-                  </TouchableOpacity>
+                  {/* Only show delete option for hosted events */}
+                  {isHostedEvent && (
+                    <TouchableOpacity
+                      style={styles.menuItem}
+                      onPress={handleDeleteEvent}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.menuItemText}>Delete Event</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </TouchableWithoutFeedback>
             </View>
@@ -1003,6 +1064,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 15,
     color: '#FFFFFC',
+    marginBottom: 2,
+  },
+  hostedByLabel: {
+    fontFamily: 'Poppins',
+    fontStyle: 'normal',
+    fontWeight: '500',
+    fontSize: 10,
+    lineHeight: 15,
+    color: '#FFB703',
     marginBottom: 2,
   },
   eventName: {
