@@ -74,7 +74,7 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#fdb607"
     },
     "ios": {
       "supportsTablet": true
@@ -82,7 +82,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#fdb607"
       },
       "package": "com.jadeaerron.piku",
       "edgeToEdgeEnabled": true,
