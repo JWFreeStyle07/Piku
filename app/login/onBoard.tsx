@@ -599,7 +599,7 @@ export default function OnBoard() {
     router.push({
       pathname: '../../login/introductionScreen',
       params: {
-        photoPath: 'beanDestroyer', // Default photo
+        photoPath: 'defaultPhoto', // Default photo
         name: '', // Empty name for user to enter
         nickname: '', // Empty nickname for user to enter
       },

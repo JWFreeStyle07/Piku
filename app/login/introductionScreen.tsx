@@ -26,14 +26,12 @@ export default function IntroductionScreen() {
   const params = useLocalSearchParams();
   
   // Get account info from navigation params with fallbacks
-  const photoPath = (params.photoPath as string) || 'beanDestroyer';
+  const photoPath = (params.photoPath as string) || 'defaultPhoto';
   const defaultUserName = (params.name as string) || '';
   const defaultNickname = (params.nickname as string) || '';
   
   const [userName, setUserName] = useState(defaultUserName);
   const [nickname, setNickname] = useState(defaultNickname);
-  const [isEditingUsername, setIsEditingUsername] = useState(false);
-  const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -49,6 +47,7 @@ export default function IntroductionScreen() {
       'gremlinHam': require('../../assets/images/login/gremlinHam.png'),
       'skibidiCatlord': require('../../assets/images/login/skibidiCatlord.png'),
       'ohioChase': require('../../assets/images/login/ohioChase.png'),
+      'defaultPhoto': require('../../assets/images/newIcon.png'),
     };
     return photos[path];
   };
@@ -240,7 +239,7 @@ export default function IntroductionScreen() {
         userName: userName,
         nickname: nickname,
         photoURL: photoURL || '',
-        defaultPhotoPath: photoPath || 'beanDestroyer',
+        defaultPhotoPath: photoPath || 'defaultPhoto',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
@@ -335,59 +334,39 @@ export default function IntroductionScreen() {
         
         <Text style={styles.photoHint}>Tap to change photo</Text>
 
-        {/* Username Rectangle (Editable) */}
-        <TouchableOpacity
-          style={styles.infoRectangle}
-          onPress={() => setIsEditingUsername(true)}
-          activeOpacity={0.7}
-        >
+        {/* Username Rectangle (Always visible TextInput) */}
+        <View style={styles.infoRectangle}>
           <MaterialCommunityIcons
             name="account-circle"
             size={24}
             color="#8B8C83"
             style={styles.icon}
           />
-          {isEditingUsername ? (
-            <TextInput
-              style={styles.usernameInput}
-              value={userName}
-              onChangeText={setUserName}
-              onBlur={() => setIsEditingUsername(false)}
-              autoFocus
-              placeholderTextColor="#8B8C83"
-              placeholder="Enter username"
-            />
-          ) : (
-            <Text style={styles.infoText}>{userName}</Text>
-          )}
-        </TouchableOpacity>
+          <TextInput
+            style={styles.usernameInput}
+            value={userName}
+            onChangeText={setUserName}
+            placeholderTextColor="#8B8C83"
+            placeholder="Enter username"
+          />
+        </View>
 
-        {/* Nickname Rectangle (Editable) */}
-        <TouchableOpacity
-          style={styles.nicknameRectangle}
-          onPress={() => setIsEditingNickname(true)}
-          activeOpacity={0.7}
-        >
+        {/* Nickname Rectangle (Always visible TextInput) */}
+        <View style={styles.nicknameRectangle}>
           <MaterialCommunityIcons
             name="at"
             size={24}
             color="#8B8C83"
             style={styles.icon}
           />
-          {isEditingNickname ? (
-            <TextInput
-              style={styles.nicknameInput}
-              value={nickname}
-              onChangeText={setNickname}
-              onBlur={() => setIsEditingNickname(false)}
-              autoFocus
-              placeholderTextColor="#8B8C83"
-              placeholder="Enter nickname"
-            />
-          ) : (
-            <Text style={styles.infoText}>{nickname}</Text>
-          )}
-        </TouchableOpacity>
+          <TextInput
+            style={styles.nicknameInput}
+            value={nickname}
+            onChangeText={setNickname}
+            placeholderTextColor="#8B8C83"
+            placeholder="Enter nickname"
+          />
+        </View>
 
         {/* Continue Button */}
         <TouchableOpacity 
